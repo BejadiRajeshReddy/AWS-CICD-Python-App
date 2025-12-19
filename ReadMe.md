@@ -197,21 +197,11 @@ http://localhost:5000
 
 ---
 
-## 🎯 Key Learnings
+<img width="1117" height="494" alt="image" src="https://github.com/user-attachments/assets/530838e2-d180-462d-aaf8-5f3534d6d520" />
+<img width="1919" height="398" alt="Screenshot 2025-12-19 122920" src="https://github.com/user-attachments/assets/9da3d16a-9260-4f15-b163-ca57e046176a" />
+<img width="1919" height="539" alt="Screenshot 2025-12-19 123000" src="https://github.com/user-attachments/assets/4de20558-59a4-4b4c-a53e-fa23e955a0bc" />
+<img width="1144" height="663" alt="Screenshot 2025-12-19 123015" src="https://github.com/user-attachments/assets/7aacb336-2194-4af2-acea-d188582d6b95" />
 
-* Implemented CI using AWS CodeBuild
-* Secure secret management with SSM Parameter Store
-* Docker image automation
-* Real-world DevOps troubleshooting and IAM handling
-
----
-
-## 🚀 Future Enhancements
-
-* Add **CodePipeline** for full CI/CD
-* Deploy to **EC2 / ECS / EKS**
-* Infrastructure using **Terraform**
-* Replace SSM with **AWS Secrets Manager**
 
 ---
 
