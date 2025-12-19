@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    IMAGE_NAME: simple-python-flask-app
+    IMAGE_NAME: simplepython-flask-app
     IMAGE_TAG: latest
 
 phases:
