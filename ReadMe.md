@@ -1,8 +1,3 @@
-Nice, this is a solid CI project 👍
-Here’s a **clean, professional README.md** you can directly put in your GitHub repo.
-
-You can copy–paste this as-is.
-
 ---
 
 # 🚀 AWS CodeBuild CI Pipeline for Python Flask App (Docker Hub)
