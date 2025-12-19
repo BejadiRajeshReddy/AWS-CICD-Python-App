@@ -13,12 +13,12 @@ This project demonstrates how to implement a **Continuous Integration (CI) pipel
 
 ## 🛠 Tech Stack
 
-* **Python (Flask)**
-* **Docker**
-* **AWS CodeBuild**
-* **AWS Systems Manager (SSM Parameter Store)**
-* **GitHub**
-* **Docker Hub**
+- **Python (Flask)**
+- **Docker**
+- **AWS CodeBuild**
+- **AWS Systems Manager (SSM Parameter Store)**
+- **GitHub**
+- **Docker Hub**
 
 ---
 
@@ -104,7 +104,7 @@ version: 0.2
 
 env:
   variables:
-    IMAGE_NAME: python-flask-app
+    IMAGE_NAME: simple-python-flask-app
     IMAGE_TAG: latest
 
 phases:
@@ -153,10 +153,34 @@ Docker Hub credentials are stored securely using **AWS SSM Parameter Store**.
 
 Required permissions for CodeBuild service role:
 
-* `ssm:GetParameter`
-* `ssm:GetParameters`
-* `logs:*`
-* `s3:*`
+Give CodeBuild permission to read SSM parameters
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
+      ],
+      "Resource": "arn:aws:ssm:us-east-1:407688391841:parameter/*"
+    }
+  ]
+}
+```
+
+### Steps to Attach
+
+1. Navigate to **IAM → Roles**
+2. Open `codebuild-PythonApp-service-role`
+3. Click **Add inline policy** or give
+4. Paste the JSON policy above
+5. Save and confirm
+
+This allows CodeBuild to retrieve Docker Hub credentials from SSM Parameter Store.
 
 ---
 
@@ -166,10 +190,11 @@ Required permissions for CodeBuild service role:
 2. GitHub triggers AWS CodeBuild
 3. CodeBuild:
 
-   * Fetches source code
-   * Retrieves secrets from SSM
-   * Builds Docker image
-   * Pushes image to Docker Hub
+   - Fetches source code
+   - Retrieves secrets from SSM
+   - Builds Docker image
+   - Pushes image to Docker Hub
+
 4. Build completes successfully ✅
 
 ---
@@ -199,19 +224,19 @@ http://localhost:5000
 
 ## 🎯 Key Learnings
 
-* Implemented CI using AWS CodeBuild
-* Secure secret management with SSM Parameter Store
-* Docker image automation
-* Real-world DevOps troubleshooting and IAM handling
+- Implemented CI using AWS CodeBuild
+- Secure secret management with SSM Parameter Store
+- Docker image automation
+- Real-world DevOps troubleshooting and IAM handling
 
 ---
 
 ## 🚀 Future Enhancements
 
-* Add **CodePipeline** for full CI/CD
-* Deploy to **EC2 / ECS / EKS**
-* Infrastructure using **Terraform**
-* Replace SSM with **AWS Secrets Manager**
+- Add **CodePipeline** for full CI/CD
+- Deploy to **EC2 / ECS / EKS**
+- Infrastructure using **Terraform**
+- Replace SSM with **AWS Secrets Manager**
 
 ---
 
