@@ -312,7 +312,7 @@ EC2-CodeDeploy-Role
     - Communicate with AWS
     - Download artifacts
     - Report deployment status
-```
+
 
 ---
 
@@ -433,30 +433,6 @@ docker run -d --name flask-app -p 5000:5000 rajeshreddy0/simple-python-flask-app
 ```
 http://<EC2-PUBLIC-IP>:5000
 ```
+![alt text](<Screenshot 2025-12-19 124249.png>)
 
----
-
-## 🔁 End-to-End Flow (Simple)
-
-1. Developer pushes code to GitHub
-2. CodePipeline triggers automatically
-3. CodeBuild builds & pushes Docker image
-4. CodeDeploy pulls image
-5. Old container stopped
-6. New container started
-7. App updated on EC2 ✅
-
----
-
-## 🎯 Interview-Ready Summary
-
-> “I implemented CI using AWS CodeBuild to build and push Docker images, and CD using AWS CodeDeploy to deploy containers on EC2. AWS CodePipeline orchestrates the entire workflow.”
-
----
-
-## 👤 Author
-
-**Rajesh Reddy Bejadi**
-DevOps | Cloud | CI/CD Enthusiast ☁️🚀
-
----
+![alt text](<Screenshot 2025-12-19 205918.png>)
