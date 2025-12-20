@@ -1,26 +1,42 @@
----
+# 🚀 End-to-End CI/CD Pipeline for Python Flask App using AWS CodePipeline
 
-# 🚀 AWS CodeBuild CI Pipeline for Python Flask App (Docker Hub)
+This project demonstrates a **complete end-to-end CI/CD pipeline** for a **Dockerized Python Flask application** using **AWS native services**.
 
-This project demonstrates how to implement a **Continuous Integration (CI) pipeline** for a **Python Flask application** using **AWS CodeBuild**, where the Docker image is built and pushed to **Docker Hub** automatically on every GitHub push.
+The pipeline is divided into **two clear phases**:
 
----
-
-## 🛠 Tech Stack
-
-- **Python (Flask)**
-- **Docker**
-- **AWS CodeBuild**
-- **AWS Systems Manager (SSM Parameter Store)**
-- **GitHub**
-- **Docker Hub**
+* **CI (Continuous Integration)** – Build & push Docker image
+* **CD (Continuous Deployment)** – Deploy image to EC2
 
 ---
 
-## 📌 CI Architecture
+## 🧱 Tech Stack
+
+* Python (Flask)
+* Docker
+* GitHub
+* AWS CodePipeline
+* AWS CodeBuild
+* AWS CodeDeploy
+* AWS EC2 (Ubuntu)
+* AWS SSM Parameter Store
+* Docker Hub
+
+---
+
+## 🏗 High-Level Architecture
 
 ```
-GitHub → AWS CodeBuild → Docker Build → Docker Hub
+GitHub
+   ↓
+AWS CodePipeline
+   ↓
+AWS CodeBuild (CI)
+   ↓
+Docker Hub
+   ↓
+AWS CodeDeploy (CD)
+   ↓
+EC2 Instance (Docker Runtime)
 ```
 
 ---
@@ -32,31 +48,18 @@ AWS-CICD-Python-App/
 ├── app.py
 ├── requirements.txt
 ├── Dockerfile
-├── buildspec.yml
+├── buildspec.yml        # CI instructions
+├── appspec.yml          # CD instructions
+├── scripts/
+│   └── start_container.sh
 └── README.md
 ```
 
 ---
 
-## 🧩 Application Overview
+# 🧩 STEP 1: Application Code
 
-A simple Flask web application that returns a greeting message when accessed.
-
-### Endpoint
-
-```
-GET /
-```
-
-### Response
-
-```
-Hello from Docker Hub CI 🚀
-```
-
----
-
-## 🐍 Flask App (`app.py`)
+## Flask Application (`app.py`)
 
 ```python
 from flask import Flask
@@ -65,7 +68,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Hello from Docker Hub CI 🚀"
+    return "Hello from AWS CI/CD Pipeline 🚀"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
@@ -73,7 +76,7 @@ if __name__ == "__main__":
 
 ---
 
-## 📦 Dockerfile
+## Docker Configuration (`Dockerfile`)
 
 ```dockerfile
 FROM python:3.10-slim
@@ -92,7 +95,18 @@ CMD ["python", "app.py"]
 
 ---
 
-## ⚙️ CI Configuration (`buildspec.yml`)
+# 🔁 STEP 2: Continuous Integration (CI)
+
+### CI is responsible for:
+
+* Building Docker image
+* Pushing image to Docker Hub
+
+---
+
+## CI Tool: AWS CodeBuild (Triggered by CodePipeline)
+
+### `buildspec.yml`
 
 ```yaml
 version: 0.2
@@ -117,38 +131,89 @@ phases:
     commands:
       - echo "Pushing image to Docker Hub"
       - docker push $DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG
-      - echo "Build completed successfully"
 ```
 
 ---
 
-## 🔐 Secure Credentials (SSM Parameter Store)
+## 🔐 CI Secrets Management (SSM Parameter Store)
 
-Docker Hub credentials are stored securely using **AWS SSM Parameter Store**.
-
-### Parameters Used
+Docker Hub credentials are stored securely in **AWS SSM Parameter Store**.
 
 | Parameter Name        | Type         |
 | --------------------- | ------------ |
 | `/dockerhub/username` | String       |
 | `/dockerhub/password` | SecureString |
 
----
+### CodeBuild Environment Variables
 
-## 🔑 CodeBuild Environment Variables
-
-| Name                 | Type            | Value                 |
-| -------------------- | --------------- | --------------------- |
-| `DOCKERHUB_USERNAME` | Parameter Store | `/dockerhub/username` |
-| `DOCKERHUB_PASSWORD` | Parameter Store | `/dockerhub/password` |
+| Name               | Type            | Value                 |
+| ------------------ | --------------- | --------------------- |
+| DOCKERHUB_USERNAME | Parameter Store | `/dockerhub/username` |
+| DOCKERHUB_PASSWORD | Parameter Store | `/dockerhub/password` |
 
 ---
+## 🟩 STEP 1: IAM Role for AWS CodePipeline
 
-## 🧑‍💻 IAM Permissions (CodeBuild Role)
+### 🔹 Role Name
 
-Required permissions for CodeBuild service role:
+```
+AWSCodePipelineServiceRole
+```
 
-Give CodeBuild permission to read SSM parameters
+### 🔹 How to Create
+
+1. Go to **IAM → Roles → Create role**
+2. Trusted entity → **AWS service**
+3. Service → **CodePipeline**
+4. Click **Next**
+
+### 🔹 Permissions
+
+Attach managed policy:
+
+```
+AWSCodePipelineFullAccess
+```
+
+### 🔹 Purpose
+
+- Pulls source from GitHub
+- Triggers CodeBuild
+- Triggers CodeDeploy
+
+---
+
+## 🟦 STEP 2: IAM Role for AWS CodeBuild (CI Role)
+
+### 🔹 Role Name
+
+```
+codebuild-PythonApp-service-role
+```
+
+### 🔹 How to Create
+
+1. IAM → Roles → Create role
+2. Trusted entity → **AWS service**
+3. Service → **CodeBuild**
+4. Click **Next**
+
+---
+
+### 🔹 Attach Managed Policies
+
+Attach:
+
+```
+CloudWatchLogsFullAccess
+AmazonS3ReadOnlyAccess
+```
+
+---
+
+### 🔹 Add Inline Policy (SSM Access – REQUIRED)
+
+This allows CodeBuild to read Docker Hub credentials.
 
 ```json
 {
@@ -161,71 +226,237 @@ Give CodeBuild permission to read SSM parameters
         "ssm:GetParameters",
         "ssm:GetParametersByPath"
       ],
-      "Resource": "arn:aws:ssm:us-east-1:407688391841:parameter/*"
+      "Resource": "arn:aws:ssm:*:*:parameter/dockerhub/*"
     }
   ]
 }
 ```
 
-### Steps to Attach
+### 🔹 Why this role is needed
 
-1. Navigate to **IAM → Roles**
-2. Open `codebuild-PythonApp-service-role`
-3. Click **Add inline policy** or give
-4. Paste the JSON policy above
-5. Save and confirm
-
-This allows CodeBuild to retrieve Docker Hub credentials from SSM Parameter Store.
+- Reads secrets from **SSM Parameter Store**
+- Logs into **Docker Hub**
+- Builds Docker image
+- Pushes image to Docker Hub
 
 ---
 
-## 🔄 CI Workflow
+## 🟨 STEP 3: IAM Role for AWS CodeDeploy (Service Role)
 
-1. Developer pushes code to GitHub
-2. GitHub triggers AWS CodeBuild
-3. CodeBuild:
+### 🔹 Role Name
 
-   - Fetches source code
-   - Retrieves secrets from SSM
-   - Builds Docker image
-   - Pushes image to Docker Hub
+```
+CodeDeployServiceRole
+```
 
-4. Build completes successfully ✅
+### 🔹 How to Create
+
+1. IAM → Roles → Create role
+2. Trusted entity → **AWS service**
+3. Service → **CodeDeploy**
+4. Click **Next**
 
 ---
 
-## 📦 Docker Image
-
-Docker Hub Repository:
+### 🔹 Attach Managed Policy
 
 ```
-docker.io/rajeshreddy0/simple-python-flask-app:latest
+AWSCodeDeployRole
 ```
 
-### Run Locally
+### 🔹 Purpose
+
+- Identifies EC2 instances using tags
+- Executes deployment lifecycle hooks
+- Coordinates deployments
+
+---
+
+## 🟧 STEP 4: IAM Role for EC2 Instance
+
+### 🔹 Role Name
+
+```
+EC2-CodeDeploy-Role
+```
+
+### 🔹 How to Create
+
+1. IAM → Roles → Create role
+2. Trusted entity → **AWS service**
+3. Service → **EC2**
+4. Click **Next**
+
+---
+
+### 🔹 Attach Managed Policy
+
+```
+AmazonEC2RoleforAWSCodeDeploy
+```
+
+### 🔹 Attach Role to EC2
+
+1. Go to **EC2 → Instances**
+2. Select instance
+3. Actions → Security → Modify IAM role
+4. Attach:
+
+```
+EC2-CodeDeploy-Role
+```
+
+### 🔹 Purpose
+
+- Allows CodeDeploy agent to:
+    - Communicate with AWS
+    - Download artifacts
+    - Report deployment status
+```
+
+---
+
+### ✅ CI Result
+
+After CI completes successfully:
+
+* Docker image is available in **Docker Hub**
+* Image tag: `latest`
+
+---
+
+# 🚀 STEP 3: Continuous Deployment (CD)
+
+### CD is responsible for:
+
+* Pulling Docker image
+* Running container on EC2
+* Replacing old container with new one
+
+---
+
+## Deployment Target
+
+* **EC2 Ubuntu instance**
+* Docker installed
+* CodeDeploy Agent running
+* Tagged for deployment
+
+---
+
+## 🐳 Docker Installation on EC2 (Ubuntu)
 
 ```bash
-docker pull rajeshreddy0/simple-python-flask-app:latest
-docker run -p 5000:5000 rajeshreddy0/simple-python-flask-app
-```
-
-Access:
-
-```
-http://localhost:5000
+sudo apt update -y
+sudo apt install docker.io -y
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ubuntu
+newgrp docker
 ```
 
 ---
 
-<img width="1117" height="494" alt="image" src="https://github.com/user-attachments/assets/530838e2-d180-462d-aaf8-5f3534d6d520" />
-<img width="1919" height="398" alt="Screenshot 2025-12-19 122920" src="https://github.com/user-attachments/assets/9da3d16a-9260-4f15-b163-ca57e046176a" />
-<img width="1919" height="539" alt="Screenshot 2025-12-19 123000" src="https://github.com/user-attachments/assets/4de20558-59a4-4b4c-a53e-fa23e955a0bc" />
-<img width="1144" height="663" alt="Screenshot 2025-12-19 123015" src="https://github.com/user-attachments/assets/7aacb336-2194-4af2-acea-d188582d6b95" />
+## 🧩 CodeDeploy Agent Installation (Ubuntu)
 
+```bash
+sudo apt update -y
+sudo apt install ruby-full wget -y
+cd /home/ubuntu
+
+wget https://aws-codedeploy-us-east-2.s3.us-east-2.amazonaws.com/latest/install
+chmod +x install
+sudo ./install auto
+
+sudo systemctl start codedeploy-agent
+sudo systemctl status codedeploy-agent
+```
+
+---
+
+## 📄 CodeDeploy Configuration (`appspec.yml`)
+
+```yaml
+version: 0.0
+os: linux
+
+files:
+  - source: /
+    destination: /home/ubuntu/flask-app
+
+hooks:
+  ApplicationStart:
+    - location: scripts/start_container.sh
+      timeout: 300
+      runas: ubuntu
+```
+
+---
+
+## ▶️ Deployment Script (`start_container.sh`)
+
+```bash
+#!/bin/bash
+
+docker stop flask-app || true
+docker rm flask-app || true
+
+docker pull rajeshreddy0/simple-python-flask-app:latest || exit 1
+
+docker run -d --name flask-app -p 5000:5000 rajeshreddy0/simple-python-flask-app:latest
+
+
+```
+
+---
+
+## 🔄 STEP 4: AWS CodePipeline (Orchestration)
+
+### Pipeline Stages
+
+1. **Source**
+
+   * GitHub (auto trigger on push)
+
+2. **Build**
+
+   * AWS CodeBuild (CI)
+
+3. **Deploy**
+
+   * AWS CodeDeploy (CD)
+
+---
+
+## 🌐 Application Access
+
+```
+http://<EC2-PUBLIC-IP>:5000
+```
+
+---
+
+## 🔁 End-to-End Flow (Simple)
+
+1. Developer pushes code to GitHub
+2. CodePipeline triggers automatically
+3. CodeBuild builds & pushes Docker image
+4. CodeDeploy pulls image
+5. Old container stopped
+6. New container started
+7. App updated on EC2 ✅
+
+---
+
+## 🎯 Interview-Ready Summary
+
+> “I implemented CI using AWS CodeBuild to build and push Docker images, and CD using AWS CodeDeploy to deploy containers on EC2. AWS CodePipeline orchestrates the entire workflow.”
 
 ---
 
 ## 👤 Author
 
 **Rajesh Reddy Bejadi**
-DevOps / Cloud Enthusiast ☁️🚀
+DevOps | Cloud | CI/CD Enthusiast ☁️🚀
+
+---
